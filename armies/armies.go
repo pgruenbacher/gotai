@@ -67,8 +67,12 @@ func (self Armies) EvalSupplies(r regions.Regions) error {
 	return nil
 }
 
-func (self *Army) Deploy() {
+func (self *Army) Deploy() error {
+	if self.Deployed == true {
+		return errors.New(fmt.Sprintf("%v army already deployed", self.Id))
+	}
 	self.Deployed = true
+	return nil
 }
 
 func (self *Army) EvalSupplyRoute(r regions.Regions) bool {
@@ -83,12 +87,23 @@ func (self *Army) EvalSupplyRoute(r regions.Regions) bool {
 	return true
 }
 
-func (self *Army) March(to *regions.Edge, regs regions.Regions) error {
+func (self *Army) March(to *regions.Edge) error {
 	if _, err := self.ValidateMarch(to); err != nil {
 		return err
 	}
-	self.Region = regs[to.Dst]
+	self.Region = to.Dst
 	return nil
+}
+
+func (self *Army) AvailableEdges() (e []regions.Edge) {
+	for _, edge := range self.Region.Edges {
+		// check for hostile armies, returns false if hostile there
+		if !hostileFilter(edge.Dst, self) {
+			continue
+		}
+		e = append(e, edge)
+	}
+	return e
 }
 
 // returns true (valid region) if there are no hostiles in it
@@ -128,7 +143,7 @@ func (a *Army) ValidateMarch(edge *regions.Edge) (bool, error) {
 	if !a.Deployed {
 		return false, errors.New(fmt.Sprintf("march invalid: army %v not deployed", a.Name))
 	}
-	if a.Region.Id != edge.Src {
+	if a.Region.Id != edge.Src.Id {
 		return false, errors.New(fmt.Sprintf("march invalid: army %v not located at %v", a.Name, edge.Src))
 	}
 	return true, nil

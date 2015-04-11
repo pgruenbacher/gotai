@@ -21,18 +21,22 @@ type Region struct {
 	Supply int
 	// Edges go from this region to others.
 	Edges map[RegionId]Edge
+	// terrain type
+	Terrain Terrain
 	// neighbors
 	Neighbors []RegionId
 	Rivers    []RegionId
-	Mountains []RegionId
 	Walls     []RegionId
 }
 
 type EdgeBoundary string
+type Terrain string
 
 const (
+	Mountain Terrain = "Mountain"
+	Plain    Terrain = "Plain"
+
 	River      EdgeBoundary = "River"
-	Mountain   EdgeBoundary = "Mountain"
 	Wall       EdgeBoundary = "Wall"
 	NoBoundary EdgeBoundary = "None"
 )
@@ -42,9 +46,9 @@ Edge goes from one node to another.
 */
 type Edge struct {
 	// Src is the id of the source node.
-	Src RegionId
+	Src *Region
 	// Dst is the id of the destination node.
-	Dst RegionId
+	Dst *Region
 	// Whether there is a river/mountain/wall between the regions.
 	Boundary EdgeBoundary
 }
@@ -94,13 +98,13 @@ func (self *Region) Connect(region *Region) error {
 		return err
 	}
 	away := &Edge{
-		Src:      self.Id,
-		Dst:      region.Id,
+		Src:      self,
+		Dst:      region,
 		Boundary: bound,
 	}
 	here := &Edge{
-		Src:      region.Id,
-		Dst:      self.Id,
+		Src:      region,
+		Dst:      self,
 		Boundary: bound,
 	}
 	self.Edges[region.Id] = *away
@@ -124,15 +128,6 @@ func validateBoundaries(a, b *Region) (EdgeBoundary, error) {
 			return NoBoundary, errors.New(fmt.Sprintf("neighbor %v river doesn't reference region %v", a.Id, b.Id))
 		}
 		return River, nil
-	}
-	for _, neighborId := range a.Mountains {
-		if neighborId != b.Id {
-			continue
-		}
-		if valid := checkNeighbors(a.Id, b.Mountains); !valid {
-			return NoBoundary, errors.New(fmt.Sprintf("neighbor %v mountains doesn't reference region %v", a.Id, b.Id))
-		}
-		return Mountain, nil
 	}
 	for _, neighborId := range a.Walls {
 		if neighborId != b.Id {

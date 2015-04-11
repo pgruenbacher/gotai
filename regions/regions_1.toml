@@ -8,20 +8,20 @@ rivers=["region2"]
 [region2]
 id="region2"
 size = 3
+terrain = "mountain"
 neighbors = ["region1","region3"]
 rivers = ["region1"]
-mountains = ["region3"]
 
 
 [region3]
 id="region3"
 size = 3
 neighbors = ["region2"]
-mountains=["region2"]
 
 [region4]
 id="region4"
 size = 3
+terrain = "plain"
 neighbors = ["region1","region5"]
 
 

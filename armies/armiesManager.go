@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pgruenbacher/gotai/actions"
+	"github.com/pgruenbacher/gotai/events"
 	"github.com/pgruenbacher/gotai/regions"
 	"github.com/pgruenbacher/gotai/utils"
 )
@@ -30,6 +31,24 @@ type EncampOrder struct {
 	ArmyOrder
 }
 
+// Events
+// Generic army event has army id
+type ArmyEvent struct {
+	events.Event
+	ArmyId armyId
+}
+
+// specific events
+type MarchEvent struct {
+	ArmyEvent
+	Src regions.RegionId
+	Dst regions.RegionId
+}
+
+type DeployEvent struct {
+	ArmyEvent
+}
+
 // manager structeure
 type ArmiesManager struct {
 	Armies  Armies
@@ -46,8 +65,11 @@ type Penalty struct {
 	CrossingPenalty int
 }
 
+// Armies Manager methods
 func (self *ArmiesManager) Init(r regions.Regions) error {
-	fmt.Println(self.Config.Penalties[2].Boundary == regions.Wall)
+	if err := utils.ReadFile("./armies/manager.toml", self); err != nil {
+		return err
+	}
 	self.regions = r
 	err := utils.ReadDir("armies", &self.Armies)
 	if err != nil {
@@ -65,18 +87,40 @@ func (self *ArmiesManager) EvaluateArmies() error {
 
 }
 
-func (self *ArmiesManager) ReadOrders(order interface{}) (err error) {
+func (self *ArmiesManager) ReadOrders(orders interface{}) (events interface{}, err error) {
 	err = nil
-	switch t := order.(type) {
+	fmt.Println("**** deploy order ***")
+	switch t := orders.(type) {
 	default:
 		// do nothing
 	case []MarchOrder:
-		err = self.marchOrders(t)
+		events, err = self.marchOrders(t)
 
 	case []DeployOrder:
-		err = self.deployOrders(t)
+		events, err = self.deployOrders(t)
 	}
-	return err
+	return events, err
+}
+
+func (self *ArmiesManager) GivePossibleOrders(id armyId) (orders []interface{}) {
+	army := self.Armies[id]
+	// if army is not deployed, give movement orders
+	if !army.Deployed {
+		deployOrder := DeployOrder{
+			ArmyOrder: newArmyOrder(army.Id),
+		}
+		orders = append(orders, deployOrder)
+	} else {
+		for _, to := range army.AvailableEdges() {
+			moveOrder := MarchOrder{
+				ArmyOrder: newArmyOrder(army.Id),
+				Src:       to.Src.Id,
+				Dst:       to.Dst.Id,
+			}
+			orders = append(orders, moveOrder)
+		}
+	}
+	return orders
 }
 
 /*
@@ -84,23 +128,49 @@ func (self *ArmiesManager) ReadOrders(order interface{}) (err error) {
  *
  */
 
-func (self *ArmiesManager) marchOrders(orders []MarchOrder) error {
-	if valid, err := self.validateMarchOrders(orders); err != nil {
-		return err
-	} else if !valid {
-		return nil
+func (self *ArmiesManager) marchOrders(orders []MarchOrder) (e []MarchEvent, err error) {
+	if err = self.validateMarchOrders(orders); err != nil {
+		return e, err
 	}
 	for _, order := range orders {
-		fmt.Println("march", self.Armies[order.ArmyId])
+		// get the army to perform on
+		army := self.Armies[order.ArmyId]
+		// Perform the march
+		edge := army.Region.Edges[order.Dst]
+		if err = army.March(&edge); err != nil {
+			return e, err
+		}
+		// make the event
+		event := MarchEvent{
+			ArmyEvent: newArmyEvent(army.Id),
+			Src:       edge.Src.Id,
+			Dst:       edge.Dst.Id,
+		}
+		e = append(e, event)
+
 	}
-	return nil
+	return e, nil
 }
 
-func (self *ArmiesManager) deployOrders(orders []DeployOrder) error {
+func (self *ArmiesManager) deployOrders(orders []DeployOrder) (e []DeployEvent, err error) {
 	for _, order := range orders {
-		fmt.Println(self.Armies[order.ArmyId])
+		if err = self.Armies[order.ArmyId].Deploy(); err != nil {
+			return e, err
+		}
+		event := DeployEvent{
+			ArmyEvent: newArmyEvent(order.ArmyId),
+		}
+		e = append(e, event)
 	}
-	return nil
+	return e, nil
+}
+
+/*
+ * Logic Section
+ */
+
+func (self *ArmiesManager) enactBoundaryPenalty(interface{}) {
+
 }
 
 /*
@@ -108,26 +178,26 @@ func (self *ArmiesManager) deployOrders(orders []DeployOrder) error {
  *
  */
 
-func (self *ArmiesManager) validateMarchOrders(orders []MarchOrder) (bool, error) {
+func (self *ArmiesManager) validateMarchOrders(orders []MarchOrder) error {
 	for _, order := range orders {
 		// validate the army id
 		if err := self.validateArmyOrder(order.ArmyOrder); err != nil {
-			return false, err
+			return err
 		}
 
 		army := self.Armies[order.ArmyId]
 
 		// validate src region
 		if err := self.validateSrc(army, order); err != nil {
-			return false, err
+			return err
 		}
 		// validate destination region
 		if err := self.validateDestination(army, order); err != nil {
-			return false, err
+			return err
 		}
 
 	}
-	return true, nil
+	return nil
 }
 
 func (self *ArmiesManager) validateArmyOrder(order ArmyOrder) error {
@@ -154,7 +224,7 @@ func (self *ArmiesManager) validateDestination(army *Army, order MarchOrder) err
 		return errors.New(fmt.Sprintf("invalid destination id %v", order.Dst))
 	}
 	for _, edge := range army.Region.Edges {
-		if edge.Dst == order.Dst {
+		if edge.Dst.Id == order.Dst {
 			valid = true
 		}
 	}
@@ -167,4 +237,24 @@ func (self *ArmiesManager) validateDestination(army *Army, order MarchOrder) err
 	}
 
 	return nil
+}
+
+/*
+ *
+ * Utilities
+ *
+ */
+
+func newArmyEvent(id armyId) ArmyEvent {
+	return ArmyEvent{
+		Event:  events.NewEvent(),
+		ArmyId: id,
+	}
+}
+
+func newArmyOrder(id armyId) ArmyOrder {
+	return ArmyOrder{
+		Order:  actions.NewOrder(),
+		ArmyId: id,
+	}
 }

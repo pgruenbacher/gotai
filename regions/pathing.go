@@ -37,7 +37,7 @@ func (self Regions) Path(src, dst RegionId, filter PathFilter, eval interface{})
 			// for each edge from the region
 			for _, edge := range region.Edges {
 				// if we either haven't been where this edge leads before, or we would get there along a shorter path this time (*1)
-				if lastPathHere, found := paths[edge.Dst]; !found || len(step.path)+1 < len(lastPathHere) {
+				if lastPathHere, found := paths[edge.Dst.Id]; !found || len(step.path)+1 < len(lastPathHere) {
 					// if we either haven't found dst yet, or if following this path is shorter than where we found dst
 					if best == nil || len(step.path)+1 < len(best) {
 						// if we aren't filtering region, or this region matches the filter
@@ -47,17 +47,17 @@ func (self Regions) Path(src, dst RegionId, filter PathFilter, eval interface{})
 							// copy the path to here to the new path
 							copy(thisPath, step.path)
 							// add this region
-							thisPath[len(step.path)] = edge.Dst
+							thisPath[len(step.path)] = edge.Dst.Id
 							// remember that this is the best way so far (guaranteed by *1)
-							paths[edge.Dst] = thisPath
+							paths[edge.Dst.Id] = thisPath
 							// if this path leads to dst
-							if edge.Dst == dst {
+							if edge.Dst.Id == dst {
 								best = thisPath
 							}
 							// queue up following this path further
 							queue = append(queue, pathStep{
 								path: thisPath,
-								pos:  edge.Dst,
+								pos:  edge.Dst.Id,
 							})
 						}
 					}

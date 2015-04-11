@@ -8,7 +8,7 @@ crossingPenalty = 4
 
 [[config.penalties]]
 boundary = "River"
-crossingPenalty = 4
+crossingPenalty = 1
 
 [[config.penalties]]
 boundary = "Wall"
