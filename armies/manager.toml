@@ -1,0 +1,19 @@
+title="bumb"
+[config]
+title="config title"
+
+[[config.penalties]]
+boundary = "Mountain"
+crossingPenalty = 4
+
+[[config.penalties]]
+boundary = "River"
+crossingPenalty = 4
+
+[[config.penalties]]
+boundary = "Wall"
+crossingPenalty = 4
+
+[[config.penalties]]
+boundary = "NoBoundary"
+crossingPenalty = 0

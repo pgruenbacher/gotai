@@ -1,0 +1,11 @@
+[army1]
+id="army1"
+startingRegion="region3"
+homeRegion="region1"
+startingHostiles=["army2"]
+
+[army2]
+id="army2"
+startingRegion="region1"
+homeRegion="region1"
+startingHostiles=["army1"]
