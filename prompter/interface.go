@@ -1,33 +1,33 @@
 package prompter
 
 import (
-	"fmt"
 	"github.com/jroimartin/gocui"
 	"github.com/pgruenbacher/gotai/state"
 	"log"
 )
 
 type validOption interface {
-	Option() option
+	Display() option
 }
 
 type option struct {
-	id    string
-	txt   string
-	order interface{}
+	id       string
+	txt      string
+	order    interface{}
+	limitKey limitedOpt
 }
 
-// var (
-// 	curOption = -1
-// 	options   = make([]option, 0)
-// 	idxOption = 0
-// )
+type limitedOpt string
+
+const (
+	armyMovementOrder limitedOpt = "armyMovementOrder"
+)
 
 type Prompt struct {
 	g         *gocui.Gui
 	options   []option
 	curOption int
-	orderList []option
+	orderList map[limitedOpt]option
 	game      *state.State
 	marshall  *Marshall
 }
@@ -47,8 +47,9 @@ func (self *Prompt) InitiatePrompt(game *state.State) {
 		log.Panicln(err)
 	}
 	defer self.g.Close()
-
+	// create the layout of the prompt, help, an
 	self.g.SetLayout(layout)
+	// initiate key bindings
 	if err := self.initKeybindings(); err != nil {
 		log.Panicln(err)
 	}
@@ -80,7 +81,6 @@ func (self *Prompt) newPromptandOptions() (err error) {
 	for _, order := range self.orderList {
 		orders = append(orders, order.order)
 	}
-	fmt.Println(orders)
 	err = self.game.Next(orders)
 	if err != nil {
 		log.Panicln(err)

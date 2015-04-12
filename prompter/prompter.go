@@ -76,43 +76,12 @@ func newOrderList(g *gocui.Gui) error {
 	return nil
 }
 
-func (self *Prompt) initKeybindings() error {
-	if err := self.g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		return err
-	}
-	if err := self.g.SetKeybinding("", gocui.KeySpace, gocui.ModNone,
-		func(g *gocui.Gui, v *gocui.View) error {
-			return self.newPromptandOptions()
-		}); err != nil {
-		return err
-	}
-	if err := self.g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone,
-		func(g *gocui.Gui, v *gocui.View) error {
-			return self.selectOption()
-		}); err != nil {
-		return err
-	}
-	if err := self.g.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone,
-		func(g *gocui.Gui, v *gocui.View) error {
-			return self.nextOption(true)
-		}); err != nil {
-		return err
-	}
-	if err := self.g.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone,
-		func(g *gocui.Gui, v *gocui.View) error {
-			return self.nextOption(false)
-		}); err != nil {
-		return err
-	}
-	return nil
-}
-
 func quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.Quit
 }
 
 func (self *Prompt) newOption(o validOption) error {
-	opt := o.Option()
+	opt := o.Display()
 	offset := len(self.options)*optionHeight + promptHeight
 	maxX, _ := self.g.Size()
 	v, err := self.g.SetView(opt.id, 2, offset, maxX/2+optionHeight, offset+optionHeight)
@@ -143,7 +112,6 @@ func (self *Prompt) newOption(o validOption) error {
 
 func (self *Prompt) selectOption() error {
 	if len(self.options) <= 0 {
-		fmt.Println("self.options <= 1")
 		return nil
 	}
 	self.pushOrderList(self.options[self.curOption])
@@ -155,7 +123,7 @@ func (self *Prompt) selectOption() error {
 }
 
 func (self *Prompt) pushOrderList(opt option) error {
-	self.orderList = append(self.orderList, opt)
+	self.orderList[armyMovementOrder] = opt
 	return nil
 }
 
@@ -187,7 +155,7 @@ func (self *Prompt) delOptions() error {
 }
 
 func (self *Prompt) delOrderList() error {
-	self.orderList = make([]option, 0)
+	self.orderList = make(map[limitedOpt]option, 0)
 	v, err := self.g.View(orderListName)
 	if err != nil {
 		return err
@@ -227,5 +195,36 @@ func (self *Prompt) nextOption(upward bool) error {
 		cv.BgColor = self.g.BgColor
 	}
 	self.curOption = next
+	return nil
+}
+
+func (self *Prompt) initKeybindings() error {
+	if err := self.g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		return err
+	}
+	if err := self.g.SetKeybinding("", gocui.KeySpace, gocui.ModNone,
+		func(g *gocui.Gui, v *gocui.View) error {
+			return self.newPromptandOptions()
+		}); err != nil {
+		return err
+	}
+	if err := self.g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone,
+		func(g *gocui.Gui, v *gocui.View) error {
+			return self.selectOption()
+		}); err != nil {
+		return err
+	}
+	if err := self.g.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone,
+		func(g *gocui.Gui, v *gocui.View) error {
+			return self.nextOption(true)
+		}); err != nil {
+		return err
+	}
+	if err := self.g.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone,
+		func(g *gocui.Gui, v *gocui.View) error {
+			return self.nextOption(false)
+		}); err != nil {
+		return err
+	}
 	return nil
 }

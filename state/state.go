@@ -7,6 +7,7 @@ import (
 	"github.com/pgruenbacher/gotai/regions"
 	"github.com/pgruenbacher/gotai/utils"
 	"github.com/pgruenbacher/log"
+	"reflect"
 )
 
 type State struct {
@@ -14,8 +15,8 @@ type State struct {
 }
 
 type allOrders struct {
-	marchOrders  []armies.MarchOrder
-	deployOrders []armies.DeployOrder
+	MarchOrders  []armies.MarchOrder
+	DeployOrders []armies.DeployOrder
 }
 
 func (self *State) InitiateGame() {
@@ -42,12 +43,16 @@ func (self *State) InitiateGame() {
 
 func (self *State) Next(orders []interface{}) error {
 	org := self.organizeOrders(orders)
-	if _, err := self.ArmiesManager.ReadOrders(org.deployOrders); err != nil {
-		log.Error("%v", err)
+	v := reflect.ValueOf(org)
+	for i := 0; i < v.NumField(); i++ {
+		if _, err := self.ArmiesManager.ReadOrders(v.Field(i).Interface()); err != nil {
+			log.Error("%v", err)
+		}
 	}
-	if _, err := self.ArmiesManager.ReadOrders(org.marchOrders); err != nil {
-		log.Error("%v", err)
-	}
+
+	// if _, err := self.ArmiesManager.ReadOrders(org.marchOrders); err != nil {
+	// 	log.Error("%v", err)
+	// }
 	return nil
 }
 
@@ -58,9 +63,9 @@ func (self *State) organizeOrders(orders []interface{}) allOrders {
 		default:
 			// do nothing with orders we don't recognize
 		case armies.MarchOrder:
-			all.marchOrders = append(all.marchOrders, t)
+			all.MarchOrders = append(all.MarchOrders, t)
 		case armies.DeployOrder:
-			all.deployOrders = append(all.deployOrders, t)
+			all.DeployOrders = append(all.DeployOrders, t)
 		}
 	}
 	return all

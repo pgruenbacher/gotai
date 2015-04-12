@@ -7,6 +7,7 @@ import (
 
 	// "github.com/jroimartin/gocui"
 	"github.com/pgruenbacher/gotai/armies"
+	"github.com/pgruenbacher/gotai/utils"
 )
 
 type Marshall struct {
@@ -18,10 +19,10 @@ type marchOption struct {
 	order armies.MarchOrder
 }
 
-func (self marchOption) Option() option {
+func (self marchOption) Display() option {
 	return option{
 		txt:   fmt.Sprintf("march to %v", self.order.Dst),
-		id:    "asfd",
+		id:    utils.RandSeq(6),
 		order: self.order,
 	}
 }
@@ -30,10 +31,10 @@ type deployOption struct {
 	order armies.DeployOrder
 }
 
-func (self deployOption) Option() option {
+func (self deployOption) Display() option {
 	return option{
-		txt:   fmt.Sprintf("deploy"),
-		id:    "asdf",
+		txt:   fmt.Sprintf("deploy the army"),
+		id:    utils.RandSeq(6),
 		order: self.order,
 	}
 }

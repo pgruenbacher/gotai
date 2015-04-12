@@ -16,7 +16,7 @@ rivers = ["region1"]
 [region3]
 id="region3"
 size = 3
-neighbors = ["region2"]
+neighbors = ["region2","region6"]
 
 [region4]
 id="region4"
@@ -29,3 +29,8 @@ neighbors = ["region1","region5"]
 id="region5"
 size = 3
 neighbors = ["region4"]
+
+[region6]
+id="region6"
+size = 3
+neighbors = ["region3"]

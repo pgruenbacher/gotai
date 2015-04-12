@@ -89,7 +89,7 @@ func (self *ArmiesManager) EvaluateArmies() error {
 
 func (self *ArmiesManager) ReadOrders(orders interface{}) (events interface{}, err error) {
 	err = nil
-	fmt.Println("**** deploy order ***")
+
 	switch t := orders.(type) {
 	default:
 		// do nothing
